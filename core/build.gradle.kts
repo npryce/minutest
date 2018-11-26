@@ -24,7 +24,7 @@ dependencies {
     implementation("junit:junit:4.12")
     implementation("io.github.classgraph:classgraph:4.4.12")
 
-    testCompile(kotlin("test"))
+    testCompile(kotlin("test-junit5"))
 
     testCompile("org.junit.jupiter:junit-jupiter-engine:+")
     testCompile("org.junit.platform:junit-platform-launcher:+") {
