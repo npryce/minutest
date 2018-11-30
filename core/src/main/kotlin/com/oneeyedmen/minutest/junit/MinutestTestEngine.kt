@@ -1,8 +1,10 @@
 package com.oneeyedmen.minutest.junit
 
 import com.oneeyedmen.minutest.RuntimeContext
+import com.oneeyedmen.minutest.RuntimeGroup
 import com.oneeyedmen.minutest.RuntimeNode
 import com.oneeyedmen.minutest.RuntimeTest
+import com.oneeyedmen.minutest.RuntimeWrapper
 import com.oneeyedmen.minutest.experimental.TopLevelContextBuilder
 import org.junit.platform.engine.EngineDiscoveryRequest
 import org.junit.platform.engine.EngineExecutionListener
@@ -16,7 +18,6 @@ import org.junit.platform.engine.TestExecutionResult
 import org.junit.platform.engine.TestSource
 import org.junit.platform.engine.TestTag
 import org.junit.platform.engine.UniqueId
-import org.junit.platform.engine.discovery.UniqueIdSelector
 import org.junit.platform.engine.support.descriptor.ClassSource
 import org.junit.platform.engine.support.descriptor.EngineDescriptor
 import org.opentest4j.AssertionFailedError
@@ -76,8 +77,8 @@ class MinutestTestEngine : TestEngine {
         executeMinutestNode(descriptor, descriptor.node, request, listener)
     }
     
-    private fun executeMinutestNode(descriptor: TestDescriptor, node: RuntimeNode, request: EngineDiscoveryRequest, listener: EngineExecutionListener) =
-        when (node) {
+    private fun executeMinutestNode(descriptor: TestDescriptor, node: RuntimeNode, request: EngineDiscoveryRequest, listener: EngineExecutionListener) {
+        return when (node) {
             is RuntimeContext -> {
                 childrenAsDescriptors(descriptor, node).forEach { child ->
                     if (request.selectsByUniqueId(child)) {
@@ -87,9 +88,12 @@ class MinutestTestEngine : TestEngine {
                     }
                 }
             }
+            is RuntimeWrapper ->
+                executeMinutestNode(descriptor, node.child, request, listener)
             is RuntimeTest ->
                 node.run()
         }
+    }
     
     private fun childrenAsDescriptors(parentDescriptor: TestDescriptor, parentNode: RuntimeContext) =
         parentNode.children.map { node -> MinutestNodeDescriptor(parentDescriptor, node) }
@@ -193,7 +197,7 @@ internal class MinutestNodeDescriptor(
     val node: RuntimeNode
 ) : MinutestDescriptor(parent, node.descriptorIdType(), node.name) {
     override fun getType() = when (node) {
-        is RuntimeContext -> CONTAINER
+        is RuntimeGroup -> CONTAINER
         is RuntimeTest -> TEST
     }
     
@@ -203,7 +207,7 @@ internal class MinutestNodeDescriptor(
 
 private fun RuntimeNode.descriptorIdType(): String {
     return when (this) {
-        is RuntimeContext -> contextType
+        is RuntimeGroup -> contextType
         is RuntimeTest -> testType
     }
 }

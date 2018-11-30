@@ -41,6 +41,8 @@ fun RuntimeNode.toStreamOfDynamicNodes(): Stream<out DynamicNode> = Stream.of(th
 private fun RuntimeNode.toDynamicNode(): DynamicNode = when (this) {
     is RuntimeTest -> dynamicTest(name) { this.run() }
     is RuntimeContext -> this.toDynamicContainer()
+    // Wrappers disappear -- they are used to attach metadata to the tree
+    is RuntimeWrapper -> child.toDynamicNode()
 }
 
 private fun RuntimeContext.toDynamicContainer(): DynamicContainer =

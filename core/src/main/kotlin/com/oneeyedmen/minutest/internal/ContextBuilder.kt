@@ -1,6 +1,8 @@
 package com.oneeyedmen.minutest.internal
 
 import com.oneeyedmen.minutest.*
+import com.oneeyedmen.minutest.experimental.RuntimeTransform
+import com.oneeyedmen.minutest.experimental.TransformedNodeBuilder
 
 internal class ContextBuilder<PF, F>(
     private val name: String,
@@ -8,36 +10,36 @@ internal class ContextBuilder<PF, F>(
     private var fixtureFactory: ((PF, TestDescriptor) -> F)?,
     private var explicitFixtureFactory: Boolean
 ) : Context<PF, F>(), NodeBuilder<PF> {
-
+    
     private val children = mutableListOf<NodeBuilder<F>>()
     private val befores = mutableListOf<(F) -> Unit>()
     private val afters = mutableListOf<(F) -> Unit>()
     private val transforms = mutableListOf<TestTransform<F>>()
-
-    override fun deriveFixture(f: (PF).() -> F) = deriveInstrumentedFixture { parentFixture, _ ->  parentFixture.f() }
-
+    
+    override fun deriveFixture(f: (PF).() -> F) = deriveInstrumentedFixture { parentFixture, _ -> parentFixture.f() }
+    
     fun deriveInstrumentedFixture(f: (parentFixture: PF, testDescriptor: TestDescriptor) -> F) {
         if (explicitFixtureFactory)
             throw IllegalStateException("Fixture already set in context \"$name\"")
         fixtureFactory = f
         explicitFixtureFactory = true
     }
-
+    
     override fun before(operation: F.() -> Unit) {
         befores.add(operation)
     }
-
+    
     override fun after(operation: F.() -> Unit) {
         afters.add(operation)
     }
-
+    
     override fun test_(name: String, f: F.() -> F): NodeBuilder<F> =
         TestBuilder(name, f).also { children.add(it) }
-
+    
     override fun context(name: String, builder: Context<F, F>.() -> Unit) =
-        // fixture factory is implicitly identity (return parent fixture (this)
+    // fixture factory is implicitly identity (return parent fixture (this)
         internalCreateContext(name, type, { this }, false, builder)
-
+    
     override fun <G> internalCreateContext(
         name: String,
         type: FixtureType,
@@ -45,23 +47,35 @@ internal class ContextBuilder<PF, F>(
         explicitFixtureFactory: Boolean,
         builder: Context<F, G>.() -> Unit
     ) = ContextBuilder(name, type, fixtureFactory, explicitFixtureFactory).apply(builder).also { children.add(it) }
-
+    
+    
+    override fun applyTreeTransform(transform: RuntimeTransform, child: NodeBuilder<F>): NodeBuilder<F> {
+        val index = children.indexOf(child)
+        
+        if (index < 0) {
+            throw IllegalArgumentException("child not found in children of context")
+        }
+    
+        val transformer = TransformedNodeBuilder(transform, child)
+        children[index] = transformer
+        return transformer
+    }
+    
     override fun addTransform(transform: TestTransform<F>) {
         transforms.add(transform)
     }
-
+    
     override fun buildNode(parent: ParentContext<PF>): RuntimeContext = PreparedRuntimeContext(name,
         parent,
         emptyList(),
         befores,
         afters,
         transforms,
-        resolvedFixtureFactory(),
-        properties).let { context ->
+        resolvedFixtureFactory()).let { context ->
         // nastiness to set up parent child in immutable nodes
         context.copy(children = this.children.map { child -> child.buildNode(context) })
     }
-
+    
     @Suppress("UNCHECKED_CAST")
     private fun resolvedFixtureFactory(): (PF, TestDescriptor) -> F = when {
         fixtureFactory != null -> fixtureFactory
@@ -70,7 +84,7 @@ internal class ContextBuilder<PF, F>(
         // as we cannot provide a fixture here to act as receiver. TODO - check somehow
         else -> error("Fixture has not been set in context \"$name\"")
     }!!
-
+    
     private fun thisContextDoesntNeedAFixture() =
         befores.isEmpty() && afters.isEmpty() && children.filterIsInstance<TestBuilder<F>>().isEmpty()
 }

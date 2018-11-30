@@ -1,7 +1,7 @@
 package com.oneeyedmen.minutest.examples
 
 import com.oneeyedmen.minutest.experimental.SKIP
-import com.oneeyedmen.minutest.experimental.minus
+import com.oneeyedmen.minutest.experimental.skipping
 import com.oneeyedmen.minutest.junit.JupiterTests
 import com.oneeyedmen.minutest.junit.context
 import org.junit.Assert.fail
@@ -9,12 +9,12 @@ import org.junit.Assert.fail
 
 class SkipExampleTests : JupiterTests {
 
-    override val tests = context<Unit>(SKIP) {
+    override val tests = context<Unit>(::skipping) {
         test("will run") {}
-
-        SKIP - context("skipped") {
+        
+        SKIP * context("skipped") {
             test("won't run") {
-                fail()
+                fail("should not have run")
             }
         }
     }

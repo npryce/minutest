@@ -12,8 +12,7 @@ internal data class PreparedRuntimeContext<PF, F>(
     private val befores: List<(F) -> Unit>,
     private val afters: List<(F) -> Unit>,
     private val transforms: List<TestTransform<F>>,
-    private val fixtureFactory: ((PF, TestDescriptor) -> F),
-    override val properties: Map<Any, Any>
+    private val fixtureFactory: ((PF, TestDescriptor) -> F)
 ) : RuntimeContext(), ParentContext<F> {
 
 

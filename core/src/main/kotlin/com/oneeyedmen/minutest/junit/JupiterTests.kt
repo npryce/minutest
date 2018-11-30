@@ -29,7 +29,7 @@ inline fun <reified F> JupiterTests.context(
 ) =
     topLevelContext(javaClass.canonicalName, askType<F>(), builder = builder)
         .buildRootNode()
-        .run(transform)
+        .let(transform)
 
 inline fun <reified F> JupiterTests.context(
     fixture: F,

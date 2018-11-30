@@ -1,5 +1,6 @@
 package com.oneeyedmen.minutest
 
+import com.oneeyedmen.minutest.experimental.RuntimeTransform
 import com.oneeyedmen.minutest.internal.FixtureType
 import com.oneeyedmen.minutest.internal.MinutestMarker
 import com.oneeyedmen.minutest.internal.askType
@@ -100,7 +101,13 @@ abstract class Context<ParentF, F> {
      * Name the parentFixture improve communication.
      */
     val ParentF.parentFixture get() = this
-
+    
+    abstract fun applyTreeTransform(transform: RuntimeTransform, child: NodeBuilder<F>): NodeBuilder<F>
+    
+    operator fun RuntimeTransform.times(transformed: NodeBuilder<F>) = applyTreeTransform(this, transformed)
+    operator fun RuntimeTransform.times(that: RuntimeTransform) = fun (node: RuntimeNode) = this(that(node))
+    
+    
     /**
      * Add a transform to be applied to the tests in this context and its children.
      */
